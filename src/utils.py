@@ -77,8 +77,8 @@ def build_swagger_spec(user, repo, subdir, spec_url, sha, serverName):
 
      # TODO: Add bootstrap style to top level HTML
     # Without a better place to display warnings, we can make them part of the description.
-    if 'description' not in swag['info']:
-        swag['info']['description'] = ''
+    if 'description' not in swag['info'] or swag["info"]["description"] is None:
+        swag['info']['description'] = ""
     for warn in warnings:
         swag['info']['description'] += swagger.get_warning_div(warn)
 
@@ -116,6 +116,12 @@ def dispatch_query(user, repo, query_name, subdir=None, spec_url=None, sha=None,
 def dispatchSPARQLQuery(raw_sparql_query, loader, requestArgs, acceptHeader, content, 
         formData, requestUrl):
     """Executes the specified SPARQL query."""
+    if "limit" in requestArgs:
+        raw_sparql_query = raw_sparql_query.replace("?_limit", str(requestArgs["limit"]))
+        raw_sparql_query += f"LIMIT {requestArgs['limit']} "
+    if "offset" in requestArgs:
+        raw_sparql_query = raw_sparql_query.replace("?_offset", str(requestArgs["offset"]))
+        raw_sparql_query += f"OFFSET {requestArgs['offset']} "
     endpoint, auth = gquery.guess_endpoint_uri(raw_sparql_query, loader)
     if endpoint == '':
         return 'No SPARQL endpoint indicated', 407, {}
@@ -140,9 +146,9 @@ def dispatchSPARQLQuery(raw_sparql_query, loader, requestArgs, acceptHeader, con
         rewritten_query = gquery.rewrite_query(query_metadata['original_query'], query_metadata['parameters'], requestArgs)
 
     # Rewrite query using pagination
-    if query_metadata['type'] == 'SelectQuery' and 'pagination' in query_metadata:
-        rewritten_query = gquery.paginate_query(rewritten_query, query_metadata['pagination'], requestArgs)
-
+    if "limit" not in requestArgs and "offset" not in requestArgs:
+        if query_metadata['type'] == 'SelectQuery' and 'pagination' in query_metadata:
+            rewritten_query = gquery.paginate_query(rewritten_query, query_metadata['pagination'], requestArgs)
     resp = None
     headers = {}
 
@@ -213,7 +219,7 @@ def dispatchSPARQLQuery(raw_sparql_query, loader, requestArgs, acceptHeader, con
         headers['Content-Type'] = response.headers['Content-Type']
 
     # If the query is paginated, set link HTTP headers
-    if pagination:
+    if pagination and "limit" not in requestArgs and "offset" not in requestArgs:
         # Get number of total results
         count = gquery.count_query_results(rewritten_query, endpoint)
         pageArg = requestArgs.get('page', None)
@@ -229,6 +235,11 @@ def dispatchSPARQLQuery(raw_sparql_query, loader, requestArgs, acceptHeader, con
         resp = SPARQLTransformer.post_process(json.loads(resp), query_metadata['transform'], opt)
 
     headers['Server'] = 'grlc/' + grlc_version
+    if isinstance(resp, list) and len(resp) == 1:
+        resp = resp[0]
+    if isinstance(resp, dict):
+        resp = json.dumps(resp)
+
     return resp, 200, headers
 
 

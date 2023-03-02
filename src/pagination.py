@@ -1,3 +1,4 @@
+import math
 from urllib.parse import urlparse, urlunparse, parse_qsl, urlencode, ParseResult
 
 def getSwaggerPaginationDef(resultsPerPage):
@@ -11,7 +12,7 @@ def getSwaggerPaginationDef(resultsPerPage):
 
 def buildPaginationHeader(resultCount, resultsPerPage, pageArg, url):
     """Build link header for result pagination"""
-    lastPage = resultCount / resultsPerPage
+    lastPage = math.ceil(resultCount / resultsPerPage)
 
     url_parts = urlparse(url)
     query = dict(parse_qsl(url_parts.query)) # Use dict parse_qsl instead of parse_qs to ensure 'page' is unique
@@ -19,9 +20,8 @@ def buildPaginationHeader(resultCount, resultsPerPage, pageArg, url):
     first_url = _buildNewUrlWithPage(url_parts, query, page=1)
     last_url = _buildNewUrlWithPage(url_parts, query, page=lastPage)
 
-    if not pageArg:
-        next_url = _buildNewUrlWithPage(url_parts, query, page=1)
-        prev_url = ""
+    if not pageArg or int(pageArg) == 1 or int(pageArg) == 0:
+        next_url = _buildNewUrlWithPage(url_parts, query, page=2)
         headerLink = "<{}>; rel=next, <{}>; rel=last".format(next_url, last_url)
     else:
         page = int(pageArg)

@@ -65,6 +65,19 @@ def guess_endpoint_uri(rq, loader):
     return endpoint, auth
 
 
+def get_parameter_from_decorators(rq, parameter_name):
+    """
+    Getting parameter by its name from decorators
+    """
+    try:
+        decorators = get_yaml_decorators(rq)
+        parameter_value = decorators[parameter_name]
+        glogger.debug(f"Got parameter value from decorators {parameter_name}: {parameter_value}")
+    except (TypeError, KeyError):
+        return None
+    return parameter_value
+
+
 def count_query_results(query, endpoint):
     """
     Returns the total number of results that query 'query' will generate
@@ -72,26 +85,23 @@ def count_query_results(query, endpoint):
              Providing a dummy count for now
     """
 
-    # number_results_query, repl = re.subn("SELECT.*FROM", "SELECT COUNT (*) FROM", query)
-    # if not repl:
-    #     number_results_query = re.sub("SELECT.*{", "SELECT COUNT(*) {", query)
-    # number_results_query = re.sub("GROUP\s+BY\s+[\?\_\(\)a-zA-Z0-9]+", "", number_results_query)
-    # number_results_query = re.sub("ORDER\s+BY\s+[\?\_\(\)a-zA-Z0-9]+", "", number_results_query)
-    # number_results_query = re.sub("LIMIT\s+[0-9]+", "", number_results_query)
-    # number_results_query = re.sub("OFFSET\s+[0-9]+", "", number_results_query)
-    #
-    # glogger.debug("Query for result count: " + number_results_query)
-    #
-    # # Preapre HTTP request
-    # headers = { 'Accept' : 'application/json' }
-    # data = { 'query' : number_results_query }
-    # count_json = requests.get(endpoint, params=data, headers=headers).json()
-    # count = int(count_json['results']['bindings'][0]['callret-0']['value'])
-    # glogger.info("Paginated query has {} results in total".format(count))
-    #
-    # return count
+    number_results_query, repl = re.subn("SELECT.*FROM", "SELECT COUNT (*) FROM", query)
+    if not repl:
+        number_results_query = re.sub("SELECT.*{", "SELECT COUNT(*) {", query)
+    number_results_query = re.sub("GROUP\s+BY\s+[\?\_\(\)a-zA-Z0-9]+", "", number_results_query)
+    number_results_query = re.sub("ORDER\s+BY\s+[\?\_\(\)a-zA-Z0-9]+", "", number_results_query)
+    number_results_query = re.sub("LIMIT\s+[0-9]+", "", number_results_query)
+    number_results_query = re.sub("OFFSET\s+[0-9]+", "", number_results_query)
 
-    return 1000
+    glogger.debug("Query for result count: " + number_results_query)
+    # Preapre HTTP request
+    headers = { 'Accept' : 'application/json' }
+    data = { 'query' : number_results_query }
+    count_json = requests.get(endpoint, params=data, headers=headers).json()
+    count = len(count_json['results']['bindings'])
+    glogger.info(f"Paginated query has {count} results in total")
+
+    return count
 
 
 def _getDictWithKey(key, dict_list):

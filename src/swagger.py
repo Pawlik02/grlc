@@ -207,6 +207,17 @@ def process_sparql_query_text(query_text, loader, call_name, extraMetadata):
     # We get the endpoint name first, since some query metadata fields (eg enums) require it
     endpoint, _ = gquery.guess_endpoint_uri(query_text, loader)
     glogger.debug("Read query endpoint: {}".format(endpoint))
+    limit = gquery.get_parameter_from_decorators(query_text, "limit")
+    offset = gquery.get_parameter_from_decorators(query_text, "offset")
+    pagination = gquery.get_parameter_from_decorators(query_text, "pagination")
+    if pagination and (limit is not None or offset is not None):
+        raise Exception("Providing pagination and limit/offset decorator at the same time is forbidden!")
+    if limit is not None:
+        query_text = query_text.replace("?_limit", str(limit))
+        query_text += f"LIMIT {limit} "
+    if offset is not None:
+        query_text = query_text.replace("?_offset", str(offset))
+        query_text += f"OFFSET {offset} "
 
     try:
         query_metadata = gquery.get_metadata(query_text, endpoint)
@@ -272,6 +283,12 @@ def process_sparql_query_text(query_text, loader, call_name, extraMetadata):
         endpoint_param['description'] = "Alternative endpoint for SPARQL query"
         endpoint_param['default'] = endpoint
         params.append(endpoint_param)
+    if limit is not None:
+        limit_param = {'name': "limit", 'type': "int", 'in': "query", 'description': "Alternative limit", 'default': limit}
+        params.append(limit_param)
+    if offset is not None:
+        offset_param = {'name': "offset", 'type': "int", 'in': "query", 'description': "Alternative offset", 'default': offset}
+        params.append(offset_param)
 
     # If this is a URL generated spec we need to force API calls with the specUrl parameter set
     if type(loader) is URLLoader:

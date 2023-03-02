@@ -170,6 +170,22 @@ Syntax:
 
 Example [query](https://github.com/CLARIAH/grlc-queries/blob/master/pagination.rq) and the equivalent [API operation](http://grlc.io/api-git/CLARIAH/grlc-queries/#/default/get_pagination).
 
+### `limit`
+Sets SPAQRL query parameter LIMIT to for example 100. It also allows you to replace variables with name ?_limit.
+
+Syntax:
+```
+#+ limit: 100
+```
+
+### `offset`
+Sets SPAQRL query parameter OFFSET to for example 50. It also allows you to replace variables with name ?_offset.
+
+Syntax:
+```
+#+ offset: 50
+```
+
 ### `method`
 Indicates the HTTP request method (`GET` and `POST` are supported).
 
